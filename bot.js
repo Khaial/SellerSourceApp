@@ -40,68 +40,84 @@ function parseDisplayDate(str) {
 // ─── Google Sheets Sync ────────────────────────────────────────────────────────
 
 async function syncToSheets(data) {
-  if (!process.env.APPS_SCRIPT_URL) return { ok: false, msg: 'Not configured' };
+  if (!process.env.APPS_SCRIPT_URL) {
+    console.log("APPS_SCRIPT_URL missing");
+    return { ok: false, msg: "Not configured" };
+  }
+
   try {
     const params = new URLSearchParams({
-      name:          data.name,
-      email:         data.email         || '',
-      phone:         data.phone,
-      state:         data.state         || '',
+      name: data.name,
+      email: data.email || '',
+      phone: data.phone,
+      state: data.state || '',
       contactMedium: data.medium,
-      notes:         data.notes         || '',
-      nextContact:   data.nextContact,
+      notes: data.notes || '',
+      nextContact: data.nextContact,
     });
-    await fetch(`${process.env.APPS_SCRIPT_URL}?${params.toString()}`);
+
+    const url = `${process.env.APPS_SCRIPT_URL}?${params.toString()}`;
+
+    console.log("Sending to Sheets:", url);
+
+    const res = await fetch(url);
+
+    console.log("Sheets status:", res.status);
+
+    const text = await res.text();
+    console.log("Sheets response:", text);
+
     return { ok: true };
   } catch (e) {
+    console.error("Sheets error:", e);
     return { ok: false, msg: e.message };
   }
 }
 
 // ─── Notion Sync ──────────────────────────────────────────────────────────────
 
-async function syncToNotion(data) {
-  const token = process.env.NOTION_TOKEN;
-  const dbId  = process.env.NOTION_DATABASE_ID;
-  if (!token || !dbId) return { ok: false, msg: 'Not configured' };
+// async function syncToNotion(data) {
+//   const token = process.env.NOTION_TOKEN;
+//   const dbId  = process.env.NOTION_DATABASE_ID;
+//   if (!token || !dbId) return { ok: false, msg: 'Not configured' };
 
-  try {
-    const nextDate = parseDisplayDate(data.nextContact);
-    const isoNext  = nextDate.toISOString().split('T')[0];
+//   try {
+//     const nextDate = parseDisplayDate(data.nextContact);
+//     const isoNext  = nextDate.toISOString().split('T')[0];
 
-    const body = {
-      parent: { database_id: dbId },
-      properties: {
-        'Name':            { title:  [{ text: { content: data.name } }] },
-        'Phone':           { phone_number: data.phone },
-        'Email':           { email: data.email || null },
-        'State':           { rich_text: [{ text: { content: data.state || '' } }] },
-        'Contact Medium':  { select: { name: data.medium } },
-        'Notes':           { rich_text: [{ text: { content: data.notes || '' } }] },
-        'Next Contact':    { date: { start: isoNext } },
-        'Date Added':      { date: { start: new Date().toISOString().split('T')[0] } },
-      }
-    };
+//     const body = {
+//       parent: { database_id: dbId },
+//       properties: {
+//         'Name':            { title:  [{ text: { content: data.name } }] },
+//         'Phone':           { phone_number: data.phone },
+//         'Email':           { email: data.email || null },
+//         'State':           { rich_text: [{ text: { content: data.state || '' } }] },
+//         'Contact Medium':  { select: { name: data.medium } },
+//         'Notes':           { rich_text: [{ text: { content: data.notes || '' } }] },
+//         'Next Contact':    { date: { start: isoNext } },
+//         'Date Added':      { date: { start: new Date().toISOString().split('T')[0] } },
+//       }
+//     };
 
-    const res = await fetch('https://api.notion.com/v1/pages', {
-      method:  'POST',
-      headers: {
-        'Authorization':  `Bearer ${token}`,
-        'Content-Type':   'application/json',
-        'Notion-Version': '2022-06-28',
-      },
-      body: JSON.stringify(body),
-    });
+//     const res = await fetch('https://api.notion.com/v1/pages', {
+//       method:  'POST',
+//       headers: {
+//         'Authorization':  `Bearer ${token}`,
+//         'Content-Type':   'application/json',
+//         'Notion-Version': '2022-06-28',
+//       },
+//       body: JSON.stringify(body),
+//     });
 
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.message || 'Notion API error');
-    }
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, msg: e.message };
-  }
-}
+//     if (!res.ok) {
+//       const err = await res.json();
+//       throw new Error(err.message || 'Notion API error');
+//     }
+//     return { ok: true };
+//   } catch (e) {
+//     return { ok: false, msg: e.message };
+//   }
+// }
 
 // ─── Slash Command ─────────────────────────────────────────────────────────────
 
@@ -200,18 +216,5 @@ client.on('interactionCreate', async interaction => {
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
-
-console.log("DISCORD_TOKEN exists:", !!process.env.DISCORD_TOKEN);
-console.log("Type:", typeof process.env.DISCORD_TOKEN);
-
-if (process.env.DISCORD_TOKEN) {
-  console.log("Length:", process.env.DISCORD_TOKEN.length);
-}
-
-console.log(Object.keys(process.env).filter(k =>
-  k.includes("TOKEN") || k.includes("DISCORD")
-));
-
-console.log(process.env.DISCORD_TOKEN);
 
 client.login(process.env.DISCORD_TOKEN);
