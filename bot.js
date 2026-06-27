@@ -201,4 +201,17 @@ client.on('interactionCreate', async interaction => {
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 
+console.log("DISCORD_TOKEN exists:", !!process.env.DISCORD_TOKEN);
+console.log("Type:", typeof process.env.DISCORD_TOKEN);
+
+if (process.env.DISCORD_TOKEN) {
+  console.log("Length:", process.env.DISCORD_TOKEN.length);
+}
+
+console.log(Object.keys(process.env).filter(k =>
+  k.includes("TOKEN") || k.includes("DISCORD")
+));
+
+console.log(process.env.DISCORD_TOKEN);
+
 client.login(process.env.DISCORD_TOKEN);
